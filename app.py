@@ -410,15 +410,65 @@ def create_saving_goal():
     cursor.close()
     return jsonify({"message": "Saving goal created"})
 
-@app.route('/api/savings/progress', methods=['GET'])
+@app.route('/api/ai/insights', methods=['GET'])
 @jwt_required()
-def get_savings_goals():
+def get_ai_insights():
     user_id = get_jwt_identity()
+
+    def format_currency(val):
+        return f"₹{float(val):,.2f}"
+
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute("SELECT * FROM savings_goals WHERE user_id = %s", (user_id,))
+
+    cursor.execute("SELECT type, amount, frequency FROM incomes WHERE user_id = %s", (user_id,))
+    incomes = cursor.fetchall()
+
+    cursor.execute("SELECT category, amount FROM budgets WHERE user_id = %s", (user_id,))
+    budgets = cursor.fetchall()
+
+    cursor.execute("SELECT category, SUM(amount) as total_spent FROM transactions WHERE user_id = %s GROUP BY category", (user_id,))
+    transactions = cursor.fetchall()
+
+    cursor.execute("SELECT goal_name, target_amount, deadline FROM savings_goals WHERE user_id = %s", (user_id,))
     goals = cursor.fetchall()
+
     cursor.close()
-    return jsonify(goals)
+
+    formatted_incomes = [f"- {i['type']}: {format_currency(i['amount'])} ({i['frequency']})" for i in incomes]
+    formatted_budgets = [f"- {b['category']}: {format_currency(b['amount'])}" for b in budgets]
+    formatted_spending = [f"- {t['category']}: {format_currency(t['total_spent'])}" for t in transactions]
+    formatted_goals = [f"- {g['goal_name']}: {format_currency(g['target_amount'])} by {g['deadline']}" for g in goals]
+
+    context = f"""
+You are a smart financial advisor.
+
+Analyze this user's financial data and give 3–5 key insights. Look for trends, risky areas, improvement opportunities, or unusual patterns.
+
+### Income:
+{chr(10).join(formatted_incomes) or 'No income data'}
+
+### Budgets:
+{chr(10).join(formatted_budgets) or 'No budget set'}
+
+### Expenses:
+{chr(10).join(formatted_spending) or 'No expenses recorded'}
+
+### Saving Goals:
+{chr(10).join(formatted_goals) or 'No saving goals'}
+
+Now provide insights as bullet points.
+"""
+
+    try:
+        model = genai.GenerativeModel(model_name="gemini-2.0-flash")
+        response = model.generate_content(context)
+        insights = response.text.strip()
+    except Exception as e:
+        return jsonify({"error": f"AI error: {str(e)}"}), 500
+
+    return jsonify({
+        "insights": insights
+    })
 
 
 @app.route('/api/reports/monthly', methods=['GET'])
