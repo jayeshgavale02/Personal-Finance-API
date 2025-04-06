@@ -412,7 +412,7 @@ def create_saving_goal():
 
 @app.route('/api/ai/insights', methods=['GET'])
 @jwt_required()
-def get_ai_insights():
+def generate_ai_insights():  # <- Renamed function
     user_id = get_jwt_identity()
 
     def format_currency(val):
