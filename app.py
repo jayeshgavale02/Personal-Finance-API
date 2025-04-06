@@ -456,7 +456,7 @@ Analyze this user's financial data and give 3–5 key insights. Look for trends,
 ### Saving Goals:
 {chr(10).join(formatted_goals) or 'No saving goals'}
 
-Now provide insights as bullet points.
+Now provide insights as bullet points. and give me without any commentry
 """
 
     try:
