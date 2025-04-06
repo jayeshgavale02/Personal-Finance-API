@@ -112,9 +112,22 @@ def get_income():
     user_id = get_jwt_identity()
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cursor.execute("SELECT * FROM incomes WHERE user_id = %s", (user_id,))
-    income = cursor.fetchall()
+    income_data = cursor.fetchall()
     cursor.close()
-    return jsonify(income)
+
+    monthly_total = sum(float(i['amount']) for i in income_data if i['frequency'].lower() == 'monthly')
+    quarterly_total = sum(float(i['amount']) for i in income_data if i['frequency'].lower() == 'quarterly')
+    yearly_total = sum(float(i['amount']) for i in income_data if i['frequency'].lower() == 'yearly')
+
+    response = {
+        "incomes": income_data,
+        "Monthly": monthly_total,
+        "Quarterly": quarterly_total,
+        "Yearly": yearly_total
+    }
+
+    return jsonify(response)
+
 
 @app.route('/api/transactions/manual', methods=['POST'])
 @jwt_required()
