@@ -342,4 +342,4 @@ def monthly_report():
     return jsonify({"monthly_report": report})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0',debug=True)
