@@ -473,22 +473,60 @@ def generate_ai_insights():  # <- Renamed function
 def monthly_report():
     user_id = get_jwt_identity()
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    # 1. Fetch income grouped by month
     cursor.execute("""
         SELECT 
             DATE_FORMAT(date, '%%b %%Y') AS month,
-            SUM(CASE WHEN category = 'Income' THEN amount ELSE 0 END) AS income,
+            SUM(amount) AS income
+        FROM incomes
+        WHERE user_id = %s
+        GROUP BY DATE_FORMAT(date, '%%Y-%%m')
+    """, (user_id,))
+    income_data = cursor.fetchall()
+
+    # 2. Fetch expenses and savings grouped by month
+    cursor.execute("""
+        SELECT 
+            DATE_FORMAT(date, '%%b %%Y') AS month,
             SUM(CASE WHEN category = 'Expenses' THEN amount ELSE 0 END) AS expenses,
             SUM(CASE WHEN category = 'Savings' THEN amount ELSE 0 END) AS savings
         FROM transactions
         WHERE user_id = %s
         GROUP BY DATE_FORMAT(date, '%%Y-%%m')
-        ORDER BY MIN(date)
     """, (user_id,))
-
-    report = cursor.fetchall()
+    tx_data = cursor.fetchall()
     cursor.close()
 
-    return jsonify({"monthly_report": report})
+    # 3. Merge both datasets into a combined dictionary
+    report_map = {}
+
+    for row in income_data:
+        month = row['month']
+        report_map[month] = {
+            'month': month,
+            'income': float(row['income']),
+            'expenses': 0.0,
+            'savings': 0.0
+        }
+
+    for row in tx_data:
+        month = row['month']
+        if month not in report_map:
+            report_map[month] = {
+                'month': month,
+                'income': 0.0,
+                'expenses': 0.0,
+                'savings': 0.0
+            }
+        report_map[month]['expenses'] = float(row['expenses'])
+        report_map[month]['savings'] = float(row['savings'])
+
+    # 4. Convert to sorted list
+    monthly_report = sorted(report_map.values(), key=lambda x: x['month'])
+
+    return jsonify({"monthly_report": monthly_report})
+
 
 
 if __name__ == '__main__':
