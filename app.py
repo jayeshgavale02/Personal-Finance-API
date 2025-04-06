@@ -474,58 +474,70 @@ def monthly_report():
     user_id = get_jwt_identity()
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
-    # 1. Fetch income grouped by month
+    # 1. Income grouped by month
     cursor.execute("""
         SELECT 
-            DATE_FORMAT(date, '%%b %%Y') AS month,
+            DATE_FORMAT(date, '%%Y-%%m') AS month_key,
+            DATE_FORMAT(date, '%%b %%Y') AS month_label,
             SUM(amount) AS income
         FROM incomes
         WHERE user_id = %s
-        GROUP BY DATE_FORMAT(date, '%%Y-%%m')
+        GROUP BY month_key
     """, (user_id,))
     income_data = cursor.fetchall()
 
-    # 2. Fetch expenses and savings grouped by month
+    # 2. Transactions grouped by month (all treated as expenses)
     cursor.execute("""
         SELECT 
-            DATE_FORMAT(date, '%%b %%Y') AS month,
-            SUM(CASE WHEN category = 'Expenses' THEN amount ELSE 0 END) AS expenses,
-            SUM(CASE WHEN category = 'Savings' THEN amount ELSE 0 END) AS savings
+            DATE_FORMAT(date, '%%Y-%%m') AS month_key,
+            DATE_FORMAT(date, '%%b %%Y') AS month_label,
+            SUM(amount) AS expenses
         FROM transactions
         WHERE user_id = %s
-        GROUP BY DATE_FORMAT(date, '%%Y-%%m')
+        GROUP BY month_key
     """, (user_id,))
-    tx_data = cursor.fetchall()
+    expense_data = cursor.fetchall()
+
     cursor.close()
 
-    # 3. Merge both datasets into a combined dictionary
+    # 3. Merge data by month_key
     report_map = {}
 
     for row in income_data:
-        month = row['month']
-        report_map[month] = {
-            'month': month,
+        report_map[row['month_key']] = {
+            'month': row['month_label'],
             'income': float(row['income']),
-            'expenses': 0.0,
-            'savings': 0.0
+            'expenses': 0.0
         }
 
-    for row in tx_data:
-        month = row['month']
-        if month not in report_map:
-            report_map[month] = {
-                'month': month,
+    for row in expense_data:
+        if row['month_key'] not in report_map:
+            report_map[row['month_key']] = {
+                'month': row['month_label'],
                 'income': 0.0,
-                'expenses': 0.0,
-                'savings': 0.0
+                'expenses': float(row['expenses'])
             }
-        report_map[month]['expenses'] = float(row['expenses'])
-        report_map[month]['savings'] = float(row['savings'])
+        else:
+            report_map[row['month_key']]['expenses'] = float(row['expenses'])
 
-    # 4. Convert to sorted list
-    monthly_report = sorted(report_map.values(), key=lambda x: x['month'])
+    # 4. Calculate savings
+    monthly_report = []
+    for month_data in report_map.values():
+        income = month_data['income']
+        expenses = month_data['expenses']
+        savings = income - expenses
+        monthly_report.append({
+            'month': month_data['month'],
+            'income': income,
+            'expenses': expenses,
+            'savings': savings
+        })
+
+    # 5. Sort by month label (optional)
+    monthly_report = sorted(monthly_report, key=lambda x: x['month'])
 
     return jsonify({"monthly_report": monthly_report})
+
 
 
 
