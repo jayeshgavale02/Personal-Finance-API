@@ -440,24 +440,22 @@ def generate_ai_insights():  # <- Renamed function
     formatted_goals = [f"- {g['goal_name']}: {format_currency(g['target_amount'])} by {g['deadline']}" for g in goals]
 
     context = f"""
-You are a smart financial advisor.
+    Analyze the user's financial data and provide exactly 3–5 concise, actionable insights in bullet points only. Do not include any introduction, summary, or extra text. Just return insights.
 
-Analyze this user's financial data and give 3–5 key insights. Look for trends, risky areas, improvement opportunities, or unusual patterns.
+    ### Income:
+    {chr(10).join(formatted_incomes) or 'No income data'}
 
-### Income:
-{chr(10).join(formatted_incomes) or 'No income data'}
+    ### Budgets:
+    {chr(10).join(formatted_budgets) or 'No budget set'}
 
-### Budgets:
-{chr(10).join(formatted_budgets) or 'No budget set'}
+    ### Expenses:
+    {chr(10).join(formatted_spending) or 'No expenses recorded'}
 
-### Expenses:
-{chr(10).join(formatted_spending) or 'No expenses recorded'}
+    ### Saving Goals:
+    {chr(10).join(formatted_goals) or 'No saving goals'}
 
-### Saving Goals:
-{chr(10).join(formatted_goals) or 'No saving goals'}
-
-Now provide insights as bullet points. and give me without any commentry
-"""
+    Insights:
+    """
 
     try:
         model = genai.GenerativeModel(model_name="gemini-2.0-flash")
