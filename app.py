@@ -120,7 +120,7 @@ def get_income():
 
     for item in income_data:
         amount = float(item['amount'])
-        freq = item['frequency'].lower()
+        freq = item['frequency'].strip().lower()
 
         if freq == 'monthly':
             monthly_total += amount
@@ -128,7 +128,7 @@ def get_income():
         elif freq == 'quarterly':
             monthly_total += amount / 3
             yearly_total += amount * 4
-        elif freq == 'yearly':
+        elif freq in ['yearly', 'annually']:
             monthly_total += amount / 12
             yearly_total += amount
         else:
