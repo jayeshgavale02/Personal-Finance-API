@@ -115,18 +115,32 @@ def get_income():
     income_data = cursor.fetchall()
     cursor.close()
 
-    monthly_total = sum(float(i['amount']) for i in income_data if i['frequency'].lower() == 'monthly')
-    quarterly_total = sum(float(i['amount']) for i in income_data if i['frequency'].lower() == 'quarterly')
-    yearly_total = sum(float(i['amount']) for i in income_data if i['frequency'].lower() == 'yearly')
+    monthly_total = 0
+    yearly_total = 0
 
-    response = {
+    for item in income_data:
+        amount = float(item['amount'])
+        freq = item['frequency'].lower()
+
+        if freq == 'monthly':
+            monthly_total += amount
+            yearly_total += amount * 12
+        elif freq == 'quarterly':
+            monthly_total += amount / 3
+            yearly_total += amount * 4
+        elif freq == 'yearly':
+            monthly_total += amount / 12
+            yearly_total += amount
+        else:
+            # Treat unknown frequency as monthly
+            monthly_total += amount
+            yearly_total += amount * 12
+
+    return jsonify({
         "incomes": income_data,
-        "Monthly": monthly_total,
-        "Quarterly": quarterly_total,
-        "Yearly": yearly_total
-    }
-
-    return jsonify(response)
+        "monthly_income_total": f"₹{monthly_total:,.2f}",
+        "yearly_income_total": f"₹{yearly_total:,.2f}"
+    })
 
 
 @app.route('/api/transactions/manual', methods=['POST'])
