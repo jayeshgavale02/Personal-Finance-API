@@ -184,12 +184,19 @@ def custom_budget():
     user_id = get_jwt_identity()
     data = request.json
     cursor = mysql.connection.cursor()
+
+    # Step 1: Delete existing budget for the user
+    cursor.execute("DELETE FROM budgets WHERE user_id = %s", (user_id,))
+
+    # Step 2: Insert new budget categories
     for category, amount in data['budget'].items():
         cursor.execute("INSERT INTO budgets (user_id, category, amount) VALUES (%s, %s, %s)",
                        (user_id, category, amount))
+
     mysql.connection.commit()
     cursor.close()
     return jsonify({"message": "Custom budget set"})
+
 
 @app.route('/api/budget', methods=['GET'])
 @jwt_required()
