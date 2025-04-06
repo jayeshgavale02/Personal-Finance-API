@@ -138,8 +138,8 @@ def get_income():
 
     return jsonify({
         "incomes": income_data,
-        "monthly_income_total": f"₹{monthly_total:,.2f}",
-        "yearly_income_total": f"₹{yearly_total:,.2f}"
+        "monthly_income_total": f"{monthly_total:,.2f}",
+        "yearly_income_total": f"{yearly_total:,.2f}"
     })
 
 
