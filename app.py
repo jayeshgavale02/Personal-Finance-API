@@ -473,16 +473,15 @@ def generate_ai_insights():  # <- Renamed function
 def monthly_report():
     user_id = get_jwt_identity()
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-
     cursor.execute("""
         SELECT 
-            DATE_FORMAT(date, '%b %Y') AS month,
+            DATE_FORMAT(date, '%%b %%Y') AS month,
             SUM(CASE WHEN category = 'Income' THEN amount ELSE 0 END) AS income,
             SUM(CASE WHEN category = 'Expenses' THEN amount ELSE 0 END) AS expenses,
             SUM(CASE WHEN category = 'Savings' THEN amount ELSE 0 END) AS savings
         FROM transactions
         WHERE user_id = %s
-        GROUP BY DATE_FORMAT(date, '%Y-%m')
+        GROUP BY DATE_FORMAT(date, '%%Y-%%m')
         ORDER BY MIN(date)
     """, (user_id,))
 
